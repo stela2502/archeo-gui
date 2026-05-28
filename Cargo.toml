@@ -1,0 +1,90 @@
+[package]
+name = "archeo-gui"
+version = "0.1.0"
+edition = "2024"
+
+authors = ["Stefan Lang"]
+license = "MIT"
+repository = "https://github.com/stela2502/archeo-gui"
+homepage = "https://github.com/stela2502/archeo-gui"
+documentation = "https://docs.rs/archeo-gui"
+
+description = """
+AI-assisted research folder archaeology tool.
+
+archeo-gui scans complex research directories, builds a persistent SQLite
+registry of files and artifacts, and uses local LLMs through Ollama to
+propose logical workflow and artifact groupings.
+
+Designed for exploratory scientific projects with notebooks, single-cell
+analysis outputs, pipelines, logs, figures, and publication artifacts.
+"""
+
+readme = "README.md"
+
+keywords = [
+    "bioinformatics",
+    "single-cell",
+    "ai",
+    "ollama",
+    "filesystem",
+]
+
+categories = [
+    "science",
+    "database",
+    "command-line-utilities",
+    "development-tools",
+]
+
+exclude = [
+    ".github/",
+    "target/",
+    "tests/data/",
+]
+
+[dependencies]
+anyhow = "1"
+
+chrono = { version = "0.4", features = ["serde"] }
+
+clap = { version = "4", features = ["derive"] }
+mapping_info = "0.1.0"
+
+reqwest = { version = "0.12", features = [
+    "blocking",
+    "json",
+    "rustls-tls",
+], default-features = false }
+
+rusqlite = { version = "0.32", features = [
+    "bundled",
+] }
+
+serde = { version = "1", features = ["derive"] }
+
+serde_json = "1"
+
+serde_yaml = "0.9"
+
+strum = "0.26"
+strum_macros = "0.26"
+
+uuid = { version = "1", features = [
+    "v4",
+    "serde",
+] }
+
+walkdir = "2"
+
+[profile.release]
+lto = true
+codegen-units = 1
+opt-level = 3
+strip = true
+
+[features]
+default = []
+
+[badges]
+maintenance = { status = "experimental" }

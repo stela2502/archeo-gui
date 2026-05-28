@@ -1,0 +1,135 @@
+name: single_cell_research_folder
+
+include_hidden: false
+follow_symlinks: false
+max_preview_bytes: 5000000
+
+exclude_dirs:
+  - .git
+  - .archeo
+  - target
+  - node_modules
+  - __pycache__
+  - .ipynb_checkpoints
+  - tmp
+  - temp
+  - work
+  - outs
+  - _temporary
+  - SC_RNA_COUNTER_CS
+
+file_kinds:
+  source_code:
+    - rs
+    - py
+    - R
+    - r
+    - sh
+    - bash
+    - zsh
+    - nf
+    - c
+    - h
+    - cpp
+    - hpp
+    - java
+    - js
+    - ts
+    - go
+    - jl
+
+  notebook:
+    - ipynb
+
+  config:
+    - toml
+    - yaml
+    - yml
+    - json
+    - ini
+    - cfg
+    - conf
+    - lock
+    - Dockerfile
+    - Makefile
+    - Snakefile
+    - nextflow.config
+    - environment.yml
+    - conda.yaml
+    - conda.yml
+    - pyproject.toml
+    - requirements.txt
+
+  table:
+    - csv
+    - tsv
+    - txt
+    - mtx
+    - matrix.mtx
+    - barcodes.tsv
+    - features.tsv
+    - genes.tsv
+    - csv.gz
+    - tsv.gz
+    - txt.gz
+    - mtx.gz
+    - matrix.mtx.gz
+    - barcodes.tsv.gz
+    - features.tsv.gz
+    - genes.tsv.gz
+
+  text:
+    - md
+    - rst
+    - tex
+    - html
+    - reference-keys.txt
+
+  log:
+    - log
+    - out
+    - err
+    - html
+
+  single_cell_data:
+    - h5ad
+    - loom
+    - h5mu
+    - zarr
+    - mtx_dir
+    - filtered_feature_bc_matrix
+    - raw_feature_bc_matrix
+
+  binary_data:
+    - bam
+    - bai
+    - cram
+    - sam
+    - fastq
+    - fq
+    - fastq.gz
+    - fq.gz
+    - h5
+    - rdata
+    - rds
+    - parquet
+    - feather
+
+  archive:
+    - zip
+    - tar
+    - tar.gz
+    - tgz
+    - xz
+    - bz2
+    - 7z
+
+  figure:
+    - png
+    - jpg
+    - jpeg
+    - svg
+    - pdf
+    - xcf
+    - tif
+    - tiff

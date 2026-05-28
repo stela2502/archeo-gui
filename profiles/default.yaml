@@ -1,0 +1,112 @@
+name: default
+
+include_hidden: false
+follow_symlinks: false
+max_preview_bytes: 5000000
+
+exclude_dirs:
+  - .git
+  - .archeo
+  - target
+  - node_modules
+  - __pycache__
+  - .ipynb_checkpoints
+  - tmp
+  - temp
+  - work
+
+file_kinds:
+  source_code:
+    - rs
+    - py
+    - R
+    - sh
+    - bash
+    - zsh
+    - nf
+    - c
+    - h
+    - cpp
+    - hpp
+    - java
+    - js
+    - ts
+    - go
+    - jl
+    - lua
+
+  notebook:
+    - ipynb
+
+  config:
+    - toml
+    - yaml
+    - yml
+    - json
+    - ini
+    - cfg
+    - conf
+    - lock
+    - Dockerfile
+    - Makefile
+    - Snakefile
+    - nextflow.config
+
+  table:
+    - csv
+    - tsv
+    - mtx
+    - csv.gz
+    - tsv.gz
+    - mtx.gz
+
+  text:
+    - txt
+    - md
+    - rst
+    - tex
+
+  log:
+    - log
+    - out
+    - err
+
+  single_cell_data:
+    - h5ad
+    - loom
+    - h5mu
+    - zarr
+
+  binary_data:
+    - bam
+    - bai
+    - cram
+    - sam
+    - fastq
+    - fq
+    - fastq.gz
+    - fq.gz
+    - h5
+    - rdata
+    - rds
+    - parquet
+    - feather
+
+  archive:
+    - zip
+    - tar
+    - tar.gz
+    - tgz
+    - xz
+    - bz2
+    - 7z
+
+  figure:
+    - png
+    - jpg
+    - jpeg
+    - svg
+    - pdf
+    - xcf
+    - tif
+    - tiff
