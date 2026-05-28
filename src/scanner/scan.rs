@@ -12,13 +12,11 @@ use crate::scanner::file_entry::{normalize_relative_path, FileEntry};
 use mapping_info::MappingInfo;
 
 
-pub fn scan_folder(root: &Path, config: &ScanConfig) -> Result<Vec<FileEntry>> {
+pub fn scan_folder(root: &Path, config: &ScanConfig, mapping_info: &mut MappingInfo ) -> Result<Vec<FileEntry>> {
     let root = root
         .canonicalize()
         .with_context(|| format!("failed to canonicalize root {}", root.display()))?;
     
-    let mut mapping_info = MappingInfo::new(None, 1.0, 1);
-
     let scan_id_placeholder = "pending_scan_id";
 
     let mut entries = Vec::new();

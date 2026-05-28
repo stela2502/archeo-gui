@@ -10,7 +10,7 @@ use crate::registry::models::{
     PromptSnapshot, ScanRun, ValidationStatus,
 };
 use crate::registry::schema::SCHEMA_SQL;
-use crate::registry::models::FileBucket;
+use crate::registry::models::{BucketClassification, FileBucket};
 use crate::scanner::config::ScanConfig;
 use crate::scanner::file_entry::{FileEntry, FileKind};
 
@@ -129,6 +129,9 @@ impl RegistryDb {
                 count: row.get::<_, i64>(2)? as usize,
                 total_size_bytes: row.get::<_, i64>(3)? as u64,
                 examples: Vec::new(),
+                classification: BucketClassification::Unreviewed,
+                user_note: String::new(),
+                ai_note: None,
             })
         })?;
 

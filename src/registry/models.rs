@@ -10,6 +10,31 @@ pub struct ScanRun {
 }
 
 
+#[derive(
+    Debug,
+    Clone,
+    Copy,
+    Serialize,
+    Deserialize,
+    PartialEq,
+    Eq,
+    Hash,
+    strum_macros::Display,
+    strum_macros::EnumString,
+)]
+#[serde(rename_all = "snake_case")]
+#[strum(serialize_all = "snake_case")]
+pub enum BucketClassification {
+    Unreviewed,
+    Excluded,
+    ImportantData,
+    AnalysisCode,
+    Publication,
+    NeedsInspection,
+    GeneratedOutput,
+    Problematic,
+}
+
 /// FileBucket
 /// = local mechanical summary
 /// = "notebook / ipynb / 82 files"
@@ -20,6 +45,11 @@ pub struct FileBucket {
     pub count: usize,
     pub total_size_bytes: u64,
     pub examples: Vec<String>,
+
+    pub classification: BucketClassification,
+    pub user_note: String,
+    pub ai_note: Option<String>,
+
 }
 
 impl FileBucket {
