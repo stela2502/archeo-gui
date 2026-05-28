@@ -1,1 +1,4 @@
-# archeo-gui\n\nUnder heavy development\n
+# archeo-gui
+
+Under heavy development
+
