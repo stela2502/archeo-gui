@@ -15,6 +15,19 @@ use crate::registry::models::{
     ScanRun,
 };
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum BucketSortKey {
+    Classification,
+    KindExt,
+    Count,
+    Size,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum SortDirection {
+    Asc,
+    Desc,
+}
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum SearchMode {
@@ -172,6 +185,9 @@ pub struct GuiState {
     pub tabs: Vec<WorkspaceViewer>,
     pub active_tab: Option<usize>,
 
+    pub bucket_sort_key: BucketSortKey,
+    pub bucket_sort_direction: SortDirection,
+
 }
 
 impl Default for GuiState {
@@ -219,6 +235,9 @@ impl Default for GuiState {
             tabs: Vec::new(),
             active_tab: None,
 
+            bucket_sort_key: BucketSortKey::Count,
+            bucket_sort_direction: SortDirection::Desc,
+
         }
     }
 }
@@ -240,6 +259,24 @@ impl GuiState {
             .and_then(|index| {
                 self.buckets.get(index)
             })
+    }
+
+    /// Call tzhis function if you have scanned or loaded a database:
+    pub fn apply_loaded_project(
+        &mut self,
+        folder: PathBuf,
+        db_path: PathBuf,
+        scan_run: ScanRun,
+        buckets: Vec<FileBucket>,
+        status: impl Into<String>,
+    ) {
+        self.current_root = Some(folder);
+        self.database_path = Some(db_path);
+        self.scan_run = Some(scan_run);
+        self.buckets = buckets;
+        self.selected_bucket = None;
+        self.wizard_step = WizardStep::Ready;
+        self.set_status(status);
     }
 
     /// calculate the project status for this GUI state at any given time.

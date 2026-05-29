@@ -7,7 +7,10 @@ use eframe::egui;
 
 use crate::gui::bucket_table;
 use crate::gui::colors;
-use crate::gui::state::GuiState;
+use crate::gui::state::{BucketSortKey, GuiState, SortDirection};
+use crate::gui::widgets::bucket_row;
+
+use crate::registry::models::FileBucket;
 
 /// Render the left navigation panel.
 pub fn show(
@@ -30,7 +33,79 @@ pub fn show(
 
     ui.separator();
 
-    show_bucket_list(ui, state);
+    draw_sort_header(ui, state);
+
+    // sort the indexes
+    let mut indices: Vec<usize> = (0..state.buckets.len()).collect();
+
+    indices.sort_by(|&a, &b| {
+        let left = &state.buckets[a];
+        let right = &state.buckets[b];
+
+        let ord = match state.bucket_sort_key {
+            BucketSortKey::Classification => {
+                format!("{:?}", left.classification)
+                    .cmp(&format!("{:?}", right.classification))
+            }
+            BucketSortKey::KindExt => {
+                (&left.file_kind, &left.extension)
+                    .cmp(&(&right.file_kind, &right.extension))
+            }
+            BucketSortKey::Count => {
+                left.count.cmp(&right.count)
+            }
+            BucketSortKey::Size => {
+                left.total_size_bytes.cmp(&right.total_size_bytes)
+            }
+        };
+
+        match state.bucket_sort_direction {
+            SortDirection::Asc => ord,
+            SortDirection::Desc => ord.reverse(),
+        }
+    });
+
+    show_bucket_list(ui, state, indices);
+}
+
+
+fn draw_sort_header(ui: &mut egui::Ui, state: &mut GuiState) {
+    ui.horizontal_wrapped(|ui| {
+        draw_sort_button(ui, state, BucketSortKey::Classification, "Class");
+        draw_sort_button(ui, state, BucketSortKey::KindExt, "Kind/ext");
+        draw_sort_button(ui, state, BucketSortKey::Count, "Count");
+        draw_sort_button(ui, state, BucketSortKey::Size, "Size");
+    });
+
+    ui.separator();
+}
+
+fn draw_sort_button(
+    ui: &mut egui::Ui,
+    state: &mut GuiState,
+    column: BucketSortKey,
+    label: &str,
+) {
+    let suffix = if state.bucket_sort_key == column {
+        match state.bucket_sort_direction {
+            SortDirection::Asc => " ↑",
+            SortDirection::Desc => " ↓",
+        }
+    } else {
+        ""
+    };
+
+    if ui.button(format!("{label}{suffix}")).clicked() {
+        if state.bucket_sort_key == column {
+            state.bucket_sort_direction = match state.bucket_sort_direction {
+                SortDirection::Asc => SortDirection::Desc,
+                SortDirection::Desc => SortDirection::Asc,
+            };
+        } else {
+            state.bucket_sort_key = column;
+            state.bucket_sort_direction = SortDirection::Asc;
+        }
+    }
 }
 
 /// Show currently loaded project information.
@@ -111,16 +186,18 @@ fn show_bucket_filters(
 fn show_bucket_list(
     ui: &mut egui::Ui,
     state: &mut GuiState,
+    index: Vec<usize>,
 ) {
     egui::ScrollArea::vertical()
         .auto_shrink([false, false])
         .show(ui, |ui| {
-            for (index, bucket) in
-                state.buckets.iter().enumerate()
+            for idx in
+                index.iter()
             {
                 let is_selected =
                     state.selected_bucket
-                        == Some(index);
+                        == Some(*idx);
+                let bucket = &state.buckets[*idx];
 
                 let color =
                     colors::classification_color(
@@ -147,7 +224,7 @@ fn show_bucket_list(
 
                 if response.clicked() {
                     state.selected_bucket =
-                        Some(index);
+                        Some(*idx);
                 }
             }
         });

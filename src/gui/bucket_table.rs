@@ -10,6 +10,8 @@ use crate::gui::state::GuiState;
 use crate::gui::widgets::bucket_row;
 
 use crate::registry::models::BucketClassification;
+use crate::gui::state::{BucketSortKey, SortDirection};
+
 
 /// Render the bucket table.
 ///
@@ -60,13 +62,122 @@ pub fn show(
     egui::ScrollArea::vertical()
         .auto_shrink([false, false])
         .show(ui, |ui| {
-            draw_header(ui);
+            draw_bucket_table(ui, state);
+        });
+}
 
-            for index in 0..state.buckets.len() {
+/// now allows sorting on differnt 'values'
+fn draw_bucket_table(
+    ui: &mut egui::Ui,
+    state: &mut GuiState,
+) {
+    let mut indices: Vec<usize> =
+        (0..state.buckets.len()).collect();
+
+    indices.sort_by(|&a, &b| {
+        let left = &state.buckets[a];
+        let right = &state.buckets[b];
+
+        let ord = match state.bucket_sort_key {
+            BucketSortKey::Classification => {
+                format!("{:?}", left.classification)
+                    .cmp(&format!("{:?}", right.classification))
+            }
+            BucketSortKey::KindExt => {
+                (
+                    &left.file_kind,
+                    &left.extension,
+                )
+                    .cmp(&(
+                        &right.file_kind,
+                        &right.extension,
+                    ))
+            }
+            BucketSortKey::Count => {
+                left.count.cmp(&right.count)
+            }
+            BucketSortKey::Size => {
+                left.total_size_bytes
+                    .cmp(&right.total_size_bytes)
+            }
+        };
+
+        match state.bucket_sort_direction {
+            SortDirection::Asc => ord,
+            SortDirection::Desc => ord.reverse(),
+        }
+    });
+
+    egui::Grid::new("bucket_table")
+        .striped(true)
+        .num_columns(5)
+        .spacing([12.0, 4.0])
+        .show(ui, |ui| {
+            draw_sort_header(
+                ui,
+                state,
+                BucketSortKey::Classification,
+                "Class",
+            );
+            draw_sort_header(
+                ui,
+                state,
+                BucketSortKey::KindExt,
+                "Kind/ext",
+            );
+            draw_sort_header(
+                ui,
+                state,
+                BucketSortKey::Count,
+                "Count",
+            );
+            draw_sort_header(
+                ui,
+                state,
+                BucketSortKey::Size,
+                "Size MB",
+            );
+            ui.strong("Examples");
+            ui.end_row();
+
+            for index in indices {
                 bucket_row::show(ui, state, index);
+                ui.end_row();
             }
         });
 }
+
+fn draw_sort_header(
+    ui: &mut egui::Ui,
+    state: &mut GuiState,
+    column: BucketSortKey,
+    label: &str,
+) {
+    let arrow =
+        if state.bucket_sort_key == column {
+            match state.bucket_sort_direction {
+                SortDirection::Asc => " ↑",
+                SortDirection::Desc => " ↓",
+            }
+        } else {
+            ""
+        };
+
+    if ui.button(format!("{label}{arrow}")).clicked() {
+        if state.bucket_sort_key == column {
+            state.bucket_sort_direction =
+                match state.bucket_sort_direction {
+                    SortDirection::Asc => SortDirection::Desc,
+                    SortDirection::Desc => SortDirection::Asc,
+                };
+        } else {
+            state.bucket_sort_key = column;
+            state.bucket_sort_direction = SortDirection::Asc;
+        }
+    }
+}
+
+
 
 /// Draw a compact summary above the bucket table.
 fn draw_summary(

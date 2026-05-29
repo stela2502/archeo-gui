@@ -66,7 +66,7 @@ impl eframe::App for ArcheoGuiApp {
 
         egui::CentralPanel::default()
             .show(ctx, |ui| {
-                wizard::show(ui, &mut self.state);
+                crate::gui::central::show(ui, &mut self.state);
             });
     }
 }

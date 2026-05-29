@@ -7,10 +7,102 @@
 //! inside `state.rs`.
 
 use eframe::egui;
+use std::path::PathBuf;
 
 use crate::gui::state::{GuiState};
 use crate::gui::central::open_text_file::OpenTextFile;
+use crate::gui::central::WorkspaceViewer;
 
+pub fn open_text_file_tab(
+    state: &mut GuiState,
+    file_ref: impl AsRef<str>,
+    requested_line: Option<usize>,
+) {
+    const MAX_TEXT_FILE_BYTES: u64 = 20 * 1024 * 1024;
+
+    let file_ref = file_ref.as_ref();
+    let rel_path = PathBuf::from(file_ref);
+
+    let Some(root) = state.current_root.clone() else {
+        state.set_status("Cannot open file: no project root selected.");
+        return;
+    };
+
+    let path = root.join(&rel_path);
+
+    let metadata = match std::fs::metadata(&path) {
+        Ok(metadata) => metadata,
+        Err(err) => {
+            state.set_status(format!(
+                "Cannot inspect file {}: {err}",
+                path.display()
+            ));
+            return;
+        }
+    };
+
+    if metadata.len() > MAX_TEXT_FILE_BYTES {
+        state.set_status(format!(
+            "File too large for text viewer: {} ({:.2} MB)",
+            rel_path.display(),
+            metadata.len() as f64 / 1_048_576.0
+        ));
+        return;
+    }
+
+    let content = match std::fs::read_to_string(&path) {
+        Ok(content) => content,
+        Err(err) => {
+            state.set_status(format!(
+                "Cannot read file {} as UTF-8 text: {err}",
+                path.display()
+            ));
+            return;
+        }
+    };
+
+    let language_hint = language_from_path(&path);
+
+    let open_file = OpenTextFile::new(
+        path,
+        rel_path,
+        content,
+        language_hint,
+        requested_line,
+    );
+
+    state.tabs.push(WorkspaceViewer::TextFile(open_file));
+    state.active_tab = Some(state.tabs.len() - 1);
+}
+
+fn language_from_path(path: &std::path::Path) -> Option<String> {
+    let ext = path.extension()?.to_str()?.to_ascii_lowercase();
+
+    let lang = match ext.as_str() {
+        "rs" => "rust",
+        "py" => "python",
+        "r" => "r",
+        "pl" | "pm" | "t" => "perl",
+        "sh" | "bash" => "bash",
+        "nf" => "groovy",
+        "js" => "javascript",
+        "ts" => "typescript",
+        "toml" => "toml",
+        "yaml" | "yml" => "yaml",
+        "json" => "json",
+        "md" => "markdown",
+        "rmd" => "rmarkdown",
+        "qmd" => "quarto",
+        "html" | "htm" => "html",
+        "css" => "css",
+        "c" | "h" => "c",
+        "cpp" | "cc" | "cxx" | "hpp" => "cpp",
+        "csv" | "tsv" | "txt" => "text",
+        _ => ext.as_str(),
+    };
+
+    Some(lang.to_string())
+}
 
 /// Render one text file
 pub fn show_file(

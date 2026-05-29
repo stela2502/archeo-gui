@@ -10,29 +10,28 @@ use eframe::egui;
 pub fn show_examples(
     ui: &mut egui::Ui,
     examples: &[String],
-) {
+) -> Option<String> {
     if examples.is_empty() {
         ui.weak("No examples available.");
-        return;
+        return None;
     }
+
+    let mut selected = None;
 
     egui::ScrollArea::vertical()
         .max_height(180.0)
         .auto_shrink([false, true])
         .show(ui, |ui| {
             for example in examples {
-                show_example_path(ui, example);
+                if ui.link(example).clicked() {
+                    selected = Some(example.clone());
+                }
             }
         });
+
+    selected
 }
 
-/// Show one example path.
-pub fn show_example_path(
-    ui: &mut egui::Ui,
-    path: &str,
-) {
-    ui.monospace(path);
-}
 
 #[cfg(test)]
 mod tests {

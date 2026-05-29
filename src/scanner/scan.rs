@@ -56,6 +56,7 @@ pub fn scan_folder(root: &Path, config: &ScanConfig, mapping_info: &mut MappingI
         let symlink_metadata = match fs::symlink_metadata(path) {
             Ok(metadata) => metadata,
             Err(err) => {
+                eprintln!("Mapping error: {err:?}");
                 mapping_info.report("symlinks_metadata_error");
                 continue;
             }
@@ -65,6 +66,7 @@ pub fn scan_folder(root: &Path, config: &ScanConfig, mapping_info: &mut MappingI
             Ok(metadata) => metadata,
             Err(err) => {
                 if symlink_metadata.file_type().is_symlink() {
+                    eprintln!("Mapping error: {err:?}");
                     mapping_info.report("broken_symlink");
                 }
                 continue;

@@ -9,6 +9,7 @@ use crate::gui::colors;
 use crate::gui::state::GuiState;
 use crate::gui::widgets::classification_chip;
 use crate::registry::models::BucketClassification;
+use crate::gui::state::WorkspaceViewer;
 
 /// Render one bucket row.
 pub fn show(
@@ -16,80 +17,81 @@ pub fn show(
     state: &mut GuiState,
     index: usize,
 ) {
-    if index >= state.buckets.len() {
-        return;
-    }
-
-    let is_selected = state.selected_bucket == Some(index);
     let bucket = &mut state.buckets[index];
 
-    let row_background = if is_selected {
-        colors::SELECTED_ROW
-    } else {
-        ui.visuals().extreme_bg_color
-    };
-
-    egui::Frame::none()
-        .fill(row_background)
-        .inner_margin(egui::Margin::same(4))
-        .show(ui, |ui| {
-            ui.horizontal(|ui| {
-                let clicked = ui
-                    .selectable_label(
-                        is_selected,
-                        format!(
-                            "{} / {}",
-                            bucket.file_kind,
-                            bucket
-                                .extension
-                                .as_deref()
-                                .unwrap_or("no_extension")
-                        ),
-                    )
-                    .clicked();
-
-                if clicked {
-                    state.selected_bucket = Some(index);
-                }
-
-                ui.add_space(8.0);
-
-                classification_chip::show_editor(
-                    ui,
-                    &mut bucket.classification,
-                );
-
-                ui.add_space(8.0);
-
-                ui.label(format!("{}", bucket.len()));
-
-                ui.add_space(8.0);
-
-                ui.label(format!("{:.2} MB", bucket.human_size_mb()));
-
-                ui.add_space(8.0);
-
-                let example_preview = bucket
-                    .examples
-                    .iter()
-                    .take(3)
-                    .cloned()
-                    .collect::<Vec<_>>()
-                    .join(", ");
-
-                ui.weak(example_preview);
-
-                ui.add_space(8.0);
-
-                if ui.small_button("generated").clicked() {
-                    bucket.classification = BucketClassification::GeneratedOutput;
-                }
-
-                if ui.small_button("inspect").clicked() {
-                    bucket.classification = BucketClassification::NeedsInspection;
-                }
-            });
+    egui::ComboBox::from_id_salt(("bucket_class", index))
+        .selected_text(format!("{:?}", bucket.classification))
+        .show_ui(ui, |ui| {
+            ui.selectable_value(
+                &mut bucket.classification,
+                BucketClassification::Unreviewed,
+                "Unreviewed",
+            );
+            ui.selectable_value(
+                &mut bucket.classification,
+                BucketClassification::NeedsInspection,
+                "Needs inspection",
+            );
+            ui.selectable_value(
+                &mut bucket.classification,
+                BucketClassification::ImportantData,
+                "Important data",
+            );
+            ui.selectable_value(
+                &mut bucket.classification,
+                BucketClassification::AnalysisCode,
+                "Analysis code",
+            );
+            ui.selectable_value(
+                &mut bucket.classification,
+                BucketClassification::Publication,
+                "Publication",
+            );
+            ui.selectable_value(
+                &mut bucket.classification,
+                BucketClassification::GeneratedOutput,
+                "Generated output",
+            );
+            ui.selectable_value(
+                &mut bucket.classification,
+                BucketClassification::Problematic,
+                "Problematic",
+            );
+            ui.selectable_value(
+                &mut bucket.classification,
+                BucketClassification::Excluded,
+                "Excluded",
+            );
         });
+
+    if ui
+        .selectable_label(
+            state.selected_bucket == Some(index),
+            format!(
+                "{} / {}",
+                bucket.file_kind,
+                bucket.extension.as_deref().unwrap_or("-")
+            ),
+        )
+        .clicked()
+    {
+        state.selected_bucket = Some(index);
+
+        state.tabs.push(WorkspaceViewer::Bucket {
+            bucket_index: index,
+        });
+
+        state.active_tab = Some(state.tabs.len() - 1);
+    }
+
+    ui.label(bucket.count.to_string());
+
+    ui.label(format!(
+        "{:.2}",
+        bucket.total_size_bytes as f64 / 1_048_576.0
+    ));
+
+    ui.label(bucket.examples.join(", "));
 }
 
 #[cfg(test)]

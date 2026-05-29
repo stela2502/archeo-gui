@@ -13,6 +13,9 @@ use crate::gui::widgets::{
 
 use crate::registry::models::BucketClassification;
 use crate::gui::worker::GuiWorkerJob;
+use crate::gui::state::WorkspaceViewer;
+use crate::gui::central::text_view::{ open_text_file_tab };
+
 
 //use crate::gui::central::search_results::SearchMode;
 
@@ -96,9 +99,12 @@ fn draw_classification(ui: &mut egui::Ui, state: &mut GuiState, index: usize) {
     });
 }
 
-fn draw_examples(ui: &mut egui::Ui, state: &GuiState, index: usize) {
+fn draw_examples(ui: &mut egui::Ui, state: &mut GuiState, index: usize) {
     ui.heading("Examples");
-    file_preview::show_examples(ui, &state.buckets[index].examples);
+    if let Some(selected_file) = file_preview::show_examples(ui, &state.buckets[index].examples){
+        // open file
+        open_text_file_tab( state, selected_file,None,);
+    }
 }
 
 fn draw_notes(ui: &mut egui::Ui, state: &mut GuiState, index: usize) {
@@ -153,18 +159,25 @@ fn draw_search_panel(ui: &mut egui::Ui, state: &mut GuiState, index: usize) {
         state.set_status("Bucket search queued");
     }
 
-/*    if !state.search_hits.is_empty() {
+    /*
+    if !state.search_hits.is_empty() {
         ui.separator();
         ui.heading("Search hits");
 
-        egui::ScrollArea::vertical()
-            .max_height(160.0)
-            .show(ui, |ui| {
-                for hit in &state.search_hits {
-                    ui.monospace(hit);
-                }
-            });
-    }*/
+        let query = state.search_query.clone();
+        let hit_length = state.search_hits.len();
+        let hits = std::mem::take(&mut state.search_hits);
+
+        
+        state.tabs.push(WorkspaceViewer::Search {
+            query,
+            hits,
+        });
+
+        state.active_tab = Some(state.tabs.len() - 1);
+        state.set_status(format!("{} search hits", hit_length) );
+    }
+    */
 }
 
 fn draw_ai_panel(ui: &mut egui::Ui, state: &mut GuiState, index: usize) {

@@ -10,6 +10,7 @@ use crate::registry::models::{FileBucket, ScanRun};
 use crate::scanner::config::ScanConfig;
 use crate::scanner::scan::scan_folder;
 use crate::gui::search::text_file::{SearchOptions, SearchHit, search_file_safely};
+use crate::gui::state::WorkspaceViewer;
 
 
 
@@ -138,6 +139,7 @@ fn apply_message(
             status,
         } => {
             state.scan_run = Some(scan_run);
+            //state.current_root = Some(folder.clone());
             state.buckets = buckets;
             state.selected_bucket = None;
             state.wizard_step = WizardStep::Ready;
@@ -149,7 +151,13 @@ fn apply_message(
             status,
             query,
         } => {
-            state.search_hits = hits;
+
+            state.tabs.push(WorkspaceViewer::Search {
+                query,
+                hits,
+            });
+            state.active_tab = Some(state.tabs.len() - 1);
+
             state.set_status(status);
         }
 
@@ -203,7 +211,9 @@ fn run_job(job: GuiWorkerJob) -> GuiWorkerMessage {
 		    use_regex,
 		    case_insensitive,
 		} => {
-            let query = needle.clone();
+            let query = format!("{}",needle );
+            let fk = format!("{}",file_kind);
+            let ext = format!("{:?}",extension );
             match run_find_in_bucket(
     		    db_path,
     		    scan_id,
@@ -213,11 +223,16 @@ fn run_job(job: GuiWorkerJob) -> GuiWorkerMessage {
     		    use_regex,
     		    case_insensitive,
     		) {
-    		    Ok((hits, status)) => GuiWorkerMessage::SearchFinished {
+    		    Ok((hits, status)) => {
+                    eprintln!(
+                        "search bucket kind={:?} ext={:?}",fk,ext
+                    );
+                    GuiWorkerMessage::SearchFinished {
                     query,
     		        hits,
     		        status,
-    		    },
+    		      }
+                },
     		    Err(err) => GuiWorkerMessage::Failed(err.to_string()),
     		}
         },
@@ -256,6 +271,8 @@ fn run_find_in_bucket(
         extension.as_deref(),
     )?;
 
+    let files_n = entries.len();
+
     let options = SearchOptions {
         needle,
         use_regex,
@@ -276,7 +293,7 @@ fn run_find_in_bucket(
         out.extend(hits);
     }
 
-    let status = format!("Search finished: {} hits", out.len());
+    let status = format!("Search finished: {} hits in {} files", out.len(), files_n );
 
     Ok((out, status))
 

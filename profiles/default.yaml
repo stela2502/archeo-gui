@@ -34,6 +34,7 @@ file_kinds:
     - go
     - jl
     - lua
+    - pl
 
   notebook:
     - ipynb

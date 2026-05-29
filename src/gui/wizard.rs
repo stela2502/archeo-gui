@@ -61,12 +61,23 @@ fn show_start_wizard(
                 Ok(db) => {
                     match db.latest_scan_run() {
                         Ok(Some(scan_run)) => {
-                            state.scan_run = Some(scan_run);
-                            state.wizard_step = WizardStep::Ready;
+                            match db.naive_file_buckets_for_scan(&scan_run.id, 10) {
+                                Ok(buckets) => {
+                                    state.apply_loaded_project(
+                                        folder.clone(),
+                                        db_path.clone(),
+                                        scan_run,
+                                        buckets,
+                                        "Folder selected. Existing registry loaded.",
+                                    );
+                                }
+                                Err(err) => {
+                                    state.set_status(format!(
+                                        "Existing registry found, but failed to load buckets: {err}"
+                                    ));
+                                }
+                            }
 
-                            state.set_status(
-                                "Folder selected. Existing registry found.",
-                            );
                         }
 
                         Ok(None) => {
