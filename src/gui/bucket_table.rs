@@ -9,6 +9,8 @@ use eframe::egui;
 use crate::gui::state::GuiState;
 use crate::gui::widgets::bucket_row;
 
+use crate::registry::models::BucketClassification;
+
 /// Render the bucket table.
 ///
 /// This function is called every egui frame, so keep it lightweight.
@@ -25,7 +27,29 @@ pub fn show(
     ui.add_space(8.0);
 
     if state.buckets.is_empty() {
-        ui.info("No buckets loaded yet. Select a folder and run a scan.");
+        match state.wizard_step {
+            crate::gui::state::WizardStep::ChooseFolder => {
+                ui.colored_label(
+                    egui::Color32::LIGHT_GRAY,
+                    "Choose a folder to begin.",
+                );
+            }
+
+            crate::gui::state::WizardStep::NeedsInitialScan => {
+                ui.colored_label(
+                    egui::Color32::YELLOW,
+                    "This folder has no scan yet. Run the initial scan.",
+                );
+            }
+
+            crate::gui::state::WizardStep::Ready => {
+                ui.colored_label(
+                    egui::Color32::LIGHT_RED,
+                    "No buckets are loaded. Try loading the existing registry or rescanning.",
+                );
+            }
+        }
+
         return;
     }
 
@@ -49,20 +73,56 @@ fn draw_summary(
     ui: &mut egui::Ui,
     state: &GuiState,
 ) {
-    let total_files: usize = state
-        .buckets
-        .iter()
-        .map(|bucket| bucket.len())
-        .sum();
+    let total_files = state.total_files();
 
-    ui.horizontal(|ui| {
-        ui.label(format!("Buckets: {}", state.buckets.len()));
+    let status =
+        state.project_status();
+
+    ui.horizontal_wrapped(|ui| {
+        ui.heading(status.label());
+
         ui.separator();
-        ui.label(format!("Files represented: {total_files}"));
 
-        if let Some(selected) = state.selected_bucket {
+        ui.colored_label(
+            status.color(),
+            format!(
+                "{} buckets",
+                state.buckets.len()
+            ),
+        );
+
+        ui.separator();
+
+        ui.label(format!(
+            "{} files",
+            total_files
+        ));
+
+        ui.separator();
+
+        let reviewed = state
+            .buckets
+            .iter()
+            .filter(|bucket| {
+                bucket.classification
+                    != BucketClassification::NeedsInspection
+            })
+            .count();
+
+        ui.label(format!(
+            "{} reviewed",
+            reviewed
+        ));
+
+        if let Some(selected) =
+            state.selected_bucket
+        {
             ui.separator();
-            ui.label(format!("Selected bucket: {}", selected + 1));
+
+            ui.label(format!(
+                "Selected: {}",
+                selected + 1
+            ));
         }
     });
 }

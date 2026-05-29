@@ -18,7 +18,7 @@ use mapping_info::MappingInfo;
 use rfd::FileDialog;
 
 use crate::gui::bucket_table;
-use crate::gui::state::GuiState;
+use crate::gui::state::{GuiState, WizardStep};
 use crate::registry::db::RegistryDb;
 use crate::scanner::config::ScanConfig;
 use crate::scanner::scan::scan_folder;
@@ -55,9 +55,43 @@ fn show_start_wizard(
 
     if ui.button("Choose folder").clicked() {
         if let Some(folder) = FileDialog::new().pick_folder() {
-            state.current_root = Some(folder.clone());
-            state.database_path = Some(default_db_path(&folder));
-            state.set_status("Folder selected");
+            let db_path = default_db_path(&folder);
+
+            match RegistryDb::open(&db_path) {
+                Ok(db) => {
+                    match db.latest_scan_run() {
+                        Ok(Some(scan_run)) => {
+                            state.scan_run = Some(scan_run);
+                            state.wizard_step = WizardStep::Ready;
+
+                            state.set_status(
+                                "Folder selected. Existing registry found.",
+                            );
+                        }
+
+                        Ok(None) => {
+                            state.wizard_step =
+                                WizardStep::NeedsInitialScan;
+
+                            state.set_status(
+                                "Folder selected. No scan found yet. Run initial scan.",
+                            );
+                        }
+
+                        Err(err) => {
+                            state.set_status(format!(
+                                "Failed to inspect registry: {err}"
+                            ));
+                        }
+                    }
+                }
+
+                Err(err) => {
+                    state.set_status(format!(
+                        "Failed to open/create registry: {err}"
+                    ));
+                }
+            }
         }
     }
 
@@ -65,6 +99,42 @@ fn show_start_wizard(
         ui.separator();
 
         ui.label(format!("Selected: {}", root.display()));
+    }
+}
+
+fn show_initial_scan_step(
+    ui: &mut egui::Ui,
+    state: &mut GuiState,
+) {
+    ui.heading("Initial scan required");
+
+    if let Some(root) = &state.current_root {
+        ui.label(format!("Folder: {}", root.display()));
+    }
+
+    ui.label("This folder has an archeo registry, but no scan run yet.");
+
+    if ui.button("Run initial scan").clicked() {
+        if let Some(root) = state.current_root.clone() {
+            match scan_and_load_buckets(&root, state) {
+                Ok(_) => {
+                    state.wizard_step = WizardStep::Ready;
+                    state.set_status("Initial scan complete.");
+                }
+                Err(err) => {
+                    state.set_status(format!("Initial scan failed: {err}"));
+                }
+            }
+        }
+    }
+
+    if ui.button("Choose different folder").clicked() {
+        state.current_root = None;
+        state.database_path = None;
+        state.db = None;
+        state.scan_run = None;
+        state.clear_buckets();
+        state.wizard_step = WizardStep::ChooseFolder;
     }
 }
 
@@ -158,7 +228,14 @@ fn load_existing_buckets(
 
     let registry = RegistryDb::open(&db_path)?;
 
-    let scan_run = registry.latest_scan_run()?;
+    let Some(scan_run) =
+        registry.latest_scan_run()?
+    else {
+        anyhow::bail!(
+            "no scan run found in registry; run `archeo scan --root {}` first",
+            root.display()
+        );
+    };
 
     let buckets = registry.naive_file_buckets_for_scan(
         &scan_run.id,

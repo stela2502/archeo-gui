@@ -6,6 +6,7 @@
 use eframe::egui;
 
 use crate::gui::state::GuiState;
+use crate::gui::worker::GuiWorkerJob;
 
 /// Render the global status bar.
 pub fn show(
@@ -116,10 +117,24 @@ fn show_action_buttons(
     ui: &mut egui::Ui,
     state: &mut GuiState,
 ) {
+
     if ui.button("Rescan").clicked() {
-        state.request_rescan = true;
-        state.last_status_message =
-            "Rescan requested".to_string();
+        let Some(root) = state.current_root.clone() else {
+            state.set_status("Cannot rescan: no folder selected");
+            return;
+        };
+
+        let Some(db_path) = state.database_path.clone() else {
+            state.set_status("Cannot rescan: no database selected");
+            return;
+        };
+
+        state.pending_job = Some(GuiWorkerJob::Rescan {
+            root,
+            db_path,
+        });
+
+        state.set_status("Rescan queued");
     }
 
     if ui.button("Recluster").clicked() {

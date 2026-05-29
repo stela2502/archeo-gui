@@ -5,6 +5,7 @@ use archeo_gui::ai;
 use archeo_gui::cli::{BuiltinProfile, Cli, Commands};
 use archeo_gui::registry;
 use archeo_gui::scanner;
+use mapping_info::MappingInfo;
 
 fn main() -> Result<()> {
     let cli = Cli::parse();
@@ -16,13 +17,15 @@ fn main() -> Result<()> {
                     .join("archeo.sqlite")
             });
 
+            let mut mapping_info = MappingInfo::new(None, 1.0, 1);
+
             let config =
                 scanner::config::ScanConfig::from_optional_yaml_file(
                     profile.as_ref(),
                 )?;
 
             let entries =
-                scanner::scan::scan_folder(&root, &config)?;
+                scanner::scan::scan_folder(&root, &config, &mut mapping_info,)?;
 
             let mut registry =
                 registry::db::RegistryDb::open(&db_path)?;
@@ -35,10 +38,13 @@ fn main() -> Result<()> {
                 entries,
             )?;
 
+            println!("{mapping_info}");
+
             println!("scan complete");
             println!("root: {}", root.display());
             println!("profile: {}", config.name);
             println!("database: {}", db_path.display());
+
         }
 
         Commands::Cluster {
@@ -48,7 +54,7 @@ fn main() -> Result<()> {
             root,
             timeout_seconds,
         } => {
-            let db_path = match (root, db) {
+            let db_path = match (root.clone(), db) {
                 (Some(root), None) => {
                     root.join(".archeo")
                         .join("archeo.sqlite")
@@ -70,8 +76,14 @@ fn main() -> Result<()> {
             let mut registry =
                 registry::db::RegistryDb::open(&db_path)?;
 
-            let scan_run =
-                registry.latest_scan_run()?;
+            let Some(scan_run) =
+                registry.latest_scan_run()?
+            else {
+                anyhow::bail!(
+                    "no scan run found in registry; run `archeo scan --root {}` first",
+                    root.expect("The root path was not given?!").display()
+                );
+            };
 
             let buckets =
                 registry.naive_file_buckets_for_scan(

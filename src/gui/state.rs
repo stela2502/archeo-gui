@@ -4,11 +4,94 @@
 //! Heavy computations should happen elsewhere and only update this state.
 
 use std::path::PathBuf;
+use crate::registry::db::RegistryDb;
+use crate::gui::worker::{GuiWorkerMessage, GuiWorkerJob};
 
 use crate::registry::models::{
+    BucketClassification,
     FileBucket,
     ScanRun,
 };
+
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum WorkspaceViewer {
+    Welcome {
+        scan_id: Option<String>,
+    },
+
+    Bucket {
+        bucket_index: usize,
+    },
+
+    Search {
+        query: String,
+        hits: Vec<SearchHit>,
+    },
+
+    TextFile(OpenTextFile),
+}
+
+impl WorkspaceViewer {
+    pub fn tab_label(&self) -> String {
+        match self {
+            Self::Welcome { .. } => "Welcome".to_string(),
+
+            Self::Bucket { bucket_index } => {
+                format!("Bucket {}", bucket_index + 1)
+            }
+
+            Self::Search { query, hits } => {
+                format!("Search: {query} ({})", hits.len())
+            }
+
+            Self::TextFile(file) => file.tab_label(),
+        }
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum WizardStep {
+    ChooseFolder,
+    NeedsInitialScan,
+    Ready,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum ProjectStatus {
+    NeedsScan,
+    NeedsClassification,
+    PartiallyReviewed,
+    MostlyReviewed,
+    FullyReviewed,
+    Problematic,
+}
+
+impl ProjectStatus {
+    pub fn label(&self) -> &'static str {
+        match self {
+            Self::NeedsScan => "Needs scan",
+            Self::NeedsClassification => "Needs classification",
+            Self::PartiallyReviewed => "Partially reviewed",
+            Self::MostlyReviewed => "Mostly reviewed",
+            Self::FullyReviewed => "Fully reviewed",
+            Self::Problematic => "Problematic",
+        }
+    }
+
+    pub fn color(&self) -> eframe::egui::Color32 {
+        match self {
+            Self::NeedsScan => eframe::egui::Color32::LIGHT_GRAY,
+            Self::NeedsClassification => eframe::egui::Color32::YELLOW,
+            Self::PartiallyReviewed => {
+                eframe::egui::Color32::from_rgb(220, 180, 60)
+            }
+            Self::MostlyReviewed => eframe::egui::Color32::LIGHT_GREEN,
+            Self::FullyReviewed => eframe::egui::Color32::GREEN,
+            Self::Problematic => eframe::egui::Color32::LIGHT_RED,
+        }
+    }
+}
 
 /// Global GUI application state.
 ///
@@ -57,6 +140,27 @@ pub struct GuiState {
 
     /// Filter to unreviewed buckets only.
     pub show_unreviewed_only: bool,
+
+    /// The link to the state database
+    pub db: Option<RegistryDb>,
+    
+    /// when starting the tool - what level have we reached?
+    pub wizard_step: WizardStep,
+
+
+    pub pending_job: Option<GuiWorkerJob>,
+    pub worker_rx: Option<crossbeam_channel::Receiver<GuiWorkerMessage>>,
+    pub worker_busy: bool,
+
+    pub search_hits: Vec<SearchHit>,
+
+    pub ai_question: String,
+    pub ai_model: String,
+    pub last_ai_answer: Option<String>,
+
+    pub tabs: Vec<WorkspaceViewer>,
+    pub active_tab: Option<usize>,
+
 }
 
 impl Default for GuiState {
@@ -83,6 +187,23 @@ impl Default for GuiState {
             show_excluded: true,
             show_generated_output: true,
             show_unreviewed_only: false,
+
+            db: None,
+
+            wizard_step: WizardStep::ChooseFolder,
+
+            pending_job: None,
+            worker_rx: None,
+            worker_busy: false,
+            search_hits: Vec::new(),
+            
+            ai_question: String::new(),
+            ai_model: "llama3.1".to_string(),
+            last_ai_answer: None,
+
+            tabs: Vec::new(),
+            active_tab: None,
+
         }
     }
 }
@@ -104,6 +225,54 @@ impl GuiState {
             .and_then(|index| {
                 self.buckets.get(index)
             })
+    }
+
+    /// calculate the project status for this GUI state at any given time.
+    /// no persistent storage!
+    pub fn project_status(
+        &self,
+    ) -> ProjectStatus {
+        if self.buckets.is_empty() {
+            return ProjectStatus::NeedsScan;
+        }
+
+        let problematic = self
+            .buckets
+            .iter()
+            .any(|bucket| {
+                bucket.classification
+                    == BucketClassification::Problematic
+            });
+
+        if problematic {
+            return ProjectStatus::Problematic;
+        }
+
+        let reviewed = self
+            .buckets
+            .iter()
+            .filter(|bucket| {
+                bucket.classification
+                    != BucketClassification::NeedsInspection
+            })
+            .count();
+
+        if reviewed == 0 {
+            return ProjectStatus::NeedsClassification;
+        }
+
+        if reviewed == self.buckets.len() {
+            return ProjectStatus::FullyReviewed;
+        }
+
+        let fraction =
+            reviewed as f32 / self.buckets.len() as f32;
+
+        if fraction >= 0.75 {
+            ProjectStatus::MostlyReviewed
+        } else {
+            ProjectStatus::PartiallyReviewed
+        }
     }
 
     /// Return the currently selected bucket mutably.

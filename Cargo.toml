@@ -80,6 +80,8 @@ walkdir = "2"
 eframe = "0.33"
 egui = "0.33"
 rfd = "0.15"
+crossbeam-channel = "0.5"
+egui_extras = { version = "0.34", features = ["syntect"] }
 
 [profile.release]
 lto = true

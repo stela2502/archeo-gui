@@ -6,8 +6,12 @@
 use eframe::egui;
 
 use crate::gui::panels;
-use crate::gui::state::GuiState;
+use crate::gui::state::{GuiState, WizardStep};
 use crate::gui::wizard;
+use crate::gui::worker::{GuiWorkerMessage, poll, dispatch};
+
+
+use crate::registry::models::{ScanRun, FileBucket};
 
 /// Main archeo-gui application.
 ///
@@ -18,6 +22,8 @@ use crate::gui::wizard;
 pub struct ArcheoGuiApp {
     pub state: GuiState,
 }
+
+
 
 impl ArcheoGuiApp {
     /// Create a fresh GUI application.
@@ -34,6 +40,11 @@ impl eframe::App for ArcheoGuiApp {
         ctx: &egui::Context,
         _frame: &mut eframe::Frame,
     ) {
+
+        poll(&mut self.state);
+        dispatch(&mut self.state);
+
+
         egui::TopBottomPanel::top("top_status_bar")
             .show(ctx, |ui| {
                 panels::status_bar::show(ui, &mut self.state);

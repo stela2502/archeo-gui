@@ -61,6 +61,36 @@ CREATE TABLE IF NOT EXISTS artifact_groups (
         ON DELETE CASCADE
 );
 
+CREATE TABLE IF NOT EXISTS bucket_classifications (
+    scan_id TEXT NOT NULL,
+
+    file_kind TEXT NOT NULL,
+
+    extension_key TEXT NOT NULL,
+
+    classification TEXT NOT NULL,
+
+    user_note TEXT NOT NULL DEFAULT '',
+
+    ai_note TEXT,
+
+    updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+    PRIMARY KEY(scan_id, file_kind, extension_key),
+
+    FOREIGN KEY(scan_id)
+        REFERENCES scan_runs(id)
+        ON DELETE CASCADE
+);
+
+
+CREATE INDEX IF NOT EXISTS idx_bucket_classifications_scan_id
+    ON bucket_classifications(scan_id);
+
+CREATE INDEX IF NOT EXISTS idx_bucket_classifications_classification
+    ON bucket_classifications(classification);
+
+
 CREATE INDEX IF NOT EXISTS idx_artifact_groups_scan_id
     ON artifact_groups(scan_id);
 
