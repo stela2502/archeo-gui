@@ -1,6 +1,6 @@
 use std::path::PathBuf;
 
-
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct OpenTextFile {
     pub path: PathBuf,
     pub rel_path: PathBuf,

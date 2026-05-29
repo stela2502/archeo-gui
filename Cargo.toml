@@ -82,6 +82,7 @@ egui = "0.33"
 rfd = "0.15"
 crossbeam-channel = "0.5"
 egui_extras = { version = "0.34", features = ["syntect"] }
+regex = "1.12.3"
 
 [profile.release]
 lto = true

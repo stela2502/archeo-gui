@@ -4,19 +4,14 @@ use std::thread;
 use anyhow::Result;
 use mapping_info::MappingInfo;
 
-use crate::gui::state::{GuiState, WizardStep};
+use crate::gui::state::{GuiState, WizardStep, SearchMode};
 use crate::registry::db::RegistryDb;
 use crate::registry::models::{FileBucket, ScanRun};
 use crate::scanner::config::ScanConfig;
 use crate::scanner::scan::scan_folder;
+use crate::gui::search::text_file::{SearchOptions, SearchHit, search_file_safely};
 
 
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum SearchMode {
-    PlainText,
-    Regex,
-}
 
 #[derive(Debug)]
 pub enum GuiWorkerMessage {
@@ -152,6 +147,7 @@ fn apply_message(
         GuiWorkerMessage::SearchFinished {
             hits,
             status,
+            query,
         } => {
             state.search_hits = hits;
             state.set_status(status);
@@ -224,7 +220,7 @@ fn run_job(job: GuiWorkerJob) -> GuiWorkerMessage {
     		    },
     		    Err(err) => GuiWorkerMessage::Failed(err.to_string()),
     		}
-        }
+        },
 
         GuiWorkerJob::AskAi {
             prompt: _,
@@ -245,7 +241,7 @@ fn run_find_in_bucket(
     needle: String,
     use_regex: bool,
     case_insensitive: bool,
-) -> Result<(Vec<String>, String)> {
+) -> Result<(Vec<SearchHit>, String)> {
     let registry = RegistryDb::open(&db_path)?;
 
     let scan_run = registry
@@ -260,7 +256,7 @@ fn run_find_in_bucket(
         extension.as_deref(),
     )?;
 
-    let options = crate::search::text_search::SearchOptions {
+    let options = SearchOptions {
         needle,
         use_regex,
         case_insensitive,
@@ -268,23 +264,22 @@ fn run_find_in_bucket(
         max_file_size_bytes: 10 * 1024 * 1024,
     };
 
-    let mut out = Vec::new();
+    let mut out: Vec<SearchHit> = Vec::new();
 
     for entry in entries {
-        let hits = crate::search::text_search::search_file_safely(
+        let hits = search_file_safely(
             &root,
             &entry,
             &options,
         )?;
 
-        for hit in hits {
-            out.push(hit.to_display_string());
-        }
+        out.extend(hits);
     }
 
     let status = format!("Search finished: {} hits", out.len());
 
     Ok((out, status))
+
 }
 
 fn scan_project(

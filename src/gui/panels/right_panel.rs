@@ -5,7 +5,7 @@
 
 use eframe::egui;
 
-use crate::gui::state::GuiState;
+use crate::gui::state::{GuiState, SearchMode};
 use crate::gui::widgets::{
     classification_chip,
     file_preview,
@@ -13,7 +13,7 @@ use crate::gui::widgets::{
 
 use crate::registry::models::BucketClassification;
 use crate::gui::worker::GuiWorkerJob;
-use crate::gui::worker::SearchMode;
+
 //use crate::gui::central::search_results::SearchMode;
 
 pub fn show(ui: &mut egui::Ui, state: &mut GuiState) {
@@ -153,7 +153,7 @@ fn draw_search_panel(ui: &mut egui::Ui, state: &mut GuiState, index: usize) {
         state.set_status("Bucket search queued");
     }
 
-    if !state.search_hits.is_empty() {
+/*    if !state.search_hits.is_empty() {
         ui.separator();
         ui.heading("Search hits");
 
@@ -164,7 +164,7 @@ fn draw_search_panel(ui: &mut egui::Ui, state: &mut GuiState, index: usize) {
                     ui.monospace(hit);
                 }
             });
-    }
+    }*/
 }
 
 fn draw_ai_panel(ui: &mut egui::Ui, state: &mut GuiState, index: usize) {

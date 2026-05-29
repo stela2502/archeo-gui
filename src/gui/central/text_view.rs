@@ -144,6 +144,9 @@ fn draw_text(
     ui: &mut egui::Ui,
     open_file: &mut OpenTextFile,
 ) {
+    let mut scroll_to_line: Option<usize> = None;
+    let mut focus_line: Option<usize> = None;
+
     egui::ScrollArea::both()
         .id_salt((
             "text_view",
@@ -151,14 +154,10 @@ fn draw_text(
         ))
         .auto_shrink([false, false])
         .show(ui, |ui| {
-            for (index, line) in
-                open_file.content.lines().enumerate()
-            {
+            for (index, line) in open_file.content.lines().enumerate() {
                 let line_no = index + 1;
 
-                let highlighted =
-                    open_file
-                        .is_highlighted_line(line_no);
+                let highlighted = open_file.is_highlighted_line(line_no);
 
                 let response = draw_line(
                     ui,
@@ -167,23 +166,28 @@ fn draw_text(
                     highlighted,
                 );
 
-                if open_file.should_scroll_to(line_no)
-                {
-                    response.scroll_to_me(Some(
-                        egui::Align::Center,
-                    ));
+                if open_file.should_scroll_to(line_no) {
+                    response.scroll_to_me(Some(egui::Align::Center));
 
-                    open_file.mark_scroll_consumed();
-
-                    open_file.focus_line(line_no);
+                    scroll_to_line = Some(line_no);
+                    focus_line = Some(line_no);
                 }
 
                 if response.clicked() {
-                    open_file.focus_line(line_no);
+                    focus_line = Some(line_no);
                 }
             }
         });
+
+    if scroll_to_line.is_some() {
+        open_file.mark_scroll_consumed();
+    }
+
+    if let Some(line_no) = focus_line {
+        open_file.focus_line(line_no);
+    }
 }
+
 
 /// Draw one numbered text line.
 fn draw_line(

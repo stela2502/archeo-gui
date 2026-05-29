@@ -6,6 +6,8 @@
 use std::path::PathBuf;
 use crate::registry::db::RegistryDb;
 use crate::gui::worker::{GuiWorkerMessage, GuiWorkerJob};
+use crate::gui::search::text_file::SearchHit;
+use crate::gui::central::open_text_file::OpenTextFile;
 
 use crate::registry::models::{
     BucketClassification,
@@ -15,6 +17,12 @@ use crate::registry::models::{
 
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum SearchMode {
+    PlainText,
+    Regex,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub enum WorkspaceViewer {
     Welcome {
         scan_id: Option<String>,
@@ -152,6 +160,9 @@ pub struct GuiState {
     pub worker_rx: Option<crossbeam_channel::Receiver<GuiWorkerMessage>>,
     pub worker_busy: bool,
 
+    pub search_query: String,
+    pub search_mode: SearchMode,
+    pub search_case_insensitive: bool,
     pub search_hits: Vec<SearchHit>,
 
     pub ai_question: String,
@@ -195,6 +206,10 @@ impl Default for GuiState {
             pending_job: None,
             worker_rx: None,
             worker_busy: false,
+
+            search_query: String::new(),
+            search_mode: SearchMode::PlainText,
+            search_case_insensitive: true,
             search_hits: Vec::new(),
             
             ai_question: String::new(),
