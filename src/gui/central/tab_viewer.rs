@@ -2,6 +2,7 @@ use eframe::egui;
 
 use crate::gui::central::{search_results, text_view};
 use crate::gui::state::{GuiState, WorkspaceViewer};
+use crate::gui::central::markdown_viewer;
 
 pub fn show(ui: &mut egui::Ui, state: &mut GuiState, index: usize) {
     match &mut state.tabs[index] {
@@ -22,5 +23,11 @@ pub fn show(ui: &mut egui::Ui, state: &mut GuiState, index: usize) {
         WorkspaceViewer::TextFile(open_file) => {
             text_view::show_file(ui, open_file);
         }
+
+        WorkspaceViewer::MarkdownDraft(mk_file) => {
+
+            markdown_viewer::show(ui, mk_file);
+        }
+
     }
 }

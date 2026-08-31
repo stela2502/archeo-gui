@@ -2,6 +2,7 @@ pub mod search_results;
 pub mod tab_viewer;
 pub mod text_view;
 pub mod open_text_file;
+pub mod markdown_viewer;
 
 use eframe::egui;
 

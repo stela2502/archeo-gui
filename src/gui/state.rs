@@ -49,8 +49,14 @@ pub enum WorkspaceViewer {
         query: String,
         hits: Vec<SearchHit>,
     },
-
+    // open scripts and text file/tables in this
     TextFile(OpenTextFile),
+    // compose a final report right here.
+    MarkdownDraft{
+        draft: PathBuf,
+        dirty: bool,
+        title: String,
+    },
 }
 
 impl WorkspaceViewer {
@@ -67,6 +73,69 @@ impl WorkspaceViewer {
             }
 
             Self::TextFile(file) => file.tab_label(),
+            
+            Self::MarkdownDraft{draft, dirty, title} => {
+                let label = draft
+                    .file_name()
+                    .and_then(|s| s.to_str())
+                    .unwrap_or("Untitled");
+
+                if *dirty {
+                    format!("{label} *")
+                } else {
+                    label.to_string()
+                }
+            },
+
+        }
+    }
+}
+
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct MarkdownDraft {
+    pub title: String,
+    pub path: Option<PathBuf>,
+    pub content: String,
+    pub dirty: bool,
+    pub last_error: Option<String>,
+}
+
+impl MarkdownDraft {
+    pub fn new(title: impl Into<String>) -> Self {
+        Self {
+            title: title.into(),
+            path: None,
+            content: String::new(),
+            dirty: false,
+            last_error: None,
+        }
+    }
+
+    pub fn save(&mut self) -> std::io::Result<()> {
+        let Some(path) = &self.path else {
+            return Err(std::io::Error::new(
+                std::io::ErrorKind::InvalidInput,
+                "no save path selected",
+            ));
+        };
+
+        std::fs::write(path, &self.content)?;
+        self.dirty = false;
+        self.last_error = None;
+        Ok(())
+    }
+
+    pub fn save_as(&mut self, path: PathBuf) -> std::io::Result<()> {
+        self.path = Some(path);
+        self.save()
+    }
+
+    pub fn label(&self) -> String {
+        if self.dirty {
+            format!("{} *", self.title)
+        } else {
+            self.title.clone()
         }
     }
 }

@@ -10,7 +10,7 @@ use crate::registry::models::{FileBucket, ScanRun};
 use crate::scanner::config::ScanConfig;
 use crate::scanner::scan::scan_folder;
 use crate::gui::search::text_file::{SearchOptions, SearchHit, search_file_safely};
-use crate::gui::state::WorkspaceViewer;
+use crate::gui::state::{WorkspaceViewer, MarkdownDraft};
 
 
 
@@ -64,6 +64,7 @@ pub enum GuiWorkerJob {
         prompt: String,
         model: String,
     },
+
 }
 
 pub fn poll(state: &mut GuiState) {
