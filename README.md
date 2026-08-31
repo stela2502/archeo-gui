@@ -94,6 +94,257 @@ The classification system is YAML-configurable, so project-specific conventions 
 
 ---
 
+## Installation
+
+### Install from source
+
+`archeo` and `archeo-gui` are written in Rust and can be installed directly from the repository.
+
+You need a working Rust toolchain. If Rust is not installed yet, install it using [rustup](https://rustup.rs/).
+
+Clone the repository and build the release binaries:
+
+```bash
+git clone https://github.com/stela2502/archeo-gui.git
+cd archeo-gui
+
+cargo build --release
+```
+
+This creates:
+
+```text
+target/release/archeo
+target/release/archeo-gui
+```
+
+You can run them directly:
+
+```bash
+./target/release/archeo --help
+./target/release/archeo-gui
+```
+
+or install them for your user:
+
+```bash
+mkdir -p ~/.local/bin
+
+cp target/release/archeo ~/.local/bin/
+cp target/release/archeo-gui ~/.local/bin/
+```
+
+Make sure `~/.local/bin` is in your `PATH`.
+
+For example, with Bash:
+
+```bash
+export PATH="$HOME/.local/bin:$PATH"
+```
+
+Add that line to `~/.bashrc` if necessary.
+
+### Using the installation package
+
+Release source bundles include an installation helper.
+
+After unpacking the archive:
+
+```bash
+tar -xzf archeo-gui-0.1.0-install.tar.gz
+cd archeo-gui-0.1.0-install
+
+./install.sh
+```
+
+By default this builds the existing release binaries and installs them into:
+
+```text
+~/.local/bin/archeo
+~/.local/bin/archeo-gui
+```
+
+A different installation prefix can be selected with:
+
+```bash
+./install.sh --prefix /some/path
+```
+
+The installer can also build without installing:
+
+```bash
+./install.sh --build-only
+```
+
+To remove a user installation made by the installer:
+
+```bash
+./uninstall.sh
+```
+
+---
+
+## Scan profiles
+
+Archeo uses **YAML scan profiles** to describe how a research directory should be interpreted.
+
+Profiles control things such as:
+
+* directories that should be ignored,
+* handling of hidden files,
+* symbolic links,
+* preview limits,
+* recognition of file types,
+* scientific data formats,
+* and domain-specific naming conventions.
+
+This keeps project-specific knowledge out of the Rust source code.
+
+You do **not** need to configure a profile before using Archeo.
+
+The standard profiles are embedded directly into the executable and therefore work immediately after installation.
+
+### Built-in profiles
+
+Archeo currently provides a general-purpose default profile and a profile aimed at single-cell/bioinformatics projects.
+
+To scan using the default configuration:
+
+```bash
+archeo scan --root /path/to/project
+```
+
+For a single-cell project, an appropriate profile can be supplied explicitly:
+
+```bash
+archeo scan \
+    --root /path/to/project \
+    --profile profiles/single_cell.yaml
+```
+
+### Create your own profile
+
+The easiest way to customize Archeo is **not to write a profile from scratch**.
+
+Instead, export one of the built-in profiles:
+
+```bash
+archeo init-profile \
+    --profile default \
+    --out my_profile.yaml
+```
+
+For a single-cell-oriented starting point:
+
+```bash
+archeo init-profile \
+    --profile single-cell \
+    --out my_single_cell_profile.yaml
+```
+
+The resulting YAML file is an ordinary text file and can be edited with any editor:
+
+```bash
+vim my_single_cell_profile.yaml
+```
+
+or:
+
+```bash
+nano my_single_cell_profile.yaml
+```
+
+You can then use your modified profile for a scan:
+
+```bash
+archeo scan \
+    --root /path/to/project \
+    --profile my_single_cell_profile.yaml
+```
+
+### Why profiles are separate from Archeo
+
+Different laboratories — and sometimes different projects in the same laboratory — accumulate files in very different ways.
+
+For example, a single-cell project may contain:
+
+```text
+FASTQ
+BAM
+MTX
+HDF5
+h5ad
+RDS
+Seurat objects
+AnnData objects
+Nextflow output
+R scripts
+Python notebooks
+figures
+differential-expression tables
+cluster annotations
+logs
+archives
+```
+
+while another scientific project may have an entirely different vocabulary.
+
+Rather than teaching all of these conventions permanently to the Archeo source code, profiles provide a lightweight configuration layer:
+
+```text
+                  archeo
+                    │
+             generic scanner
+                    │
+                    ▼
+             scan profile.yaml
+                    │
+        ┌───────────┴───────────┐
+        ▼                       ▼
+ single-cell project       another domain
+ conventions               conventions
+```
+
+This also makes profiles easy to share.
+
+A laboratory can maintain its own profile in Git alongside its analysis conventions:
+
+```text
+lab-archeo-profiles/
+├── single_cell.yaml
+├── spatial.yaml
+├── proteomics.yaml
+└── legacy_projects.yaml
+```
+
+Individual projects can then be scanned using the appropriate profile without modifying or recompiling Archeo.
+
+### Recommended workflow
+
+Start with the built-in profile that most closely matches your project:
+
+```bash
+archeo init-profile \
+    --profile single-cell \
+    --out archeo-profile.yaml
+```
+
+Edit `archeo-profile.yaml` to describe your laboratory or project conventions, then:
+
+```bash
+archeo scan \
+    --root . \
+    --profile archeo-profile.yaml
+```
+
+If the profile becomes useful across several projects, put it under version control and reuse it.
+
+In other words:
+
+**Archeo provides the archaeology engine; the profile teaches it the local dialect spoken by your research folders.**
+
+---
+
 ## What it does
 
 At the moment, `archeo-gui` provides four main building blocks.
