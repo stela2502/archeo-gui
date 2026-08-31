@@ -96,8 +96,6 @@ The classification system is YAML-configurable, so project-specific conventions 
 
 ## Installation
 
-### Install from source
-
 `archeo` and `archeo-gui` are written in Rust and can be installed directly from the repository.
 
 You need a working Rust toolchain. If Rust is not installed yet, install it using [rustup](https://rustup.rs/).
@@ -107,7 +105,6 @@ Clone the repository and build the release binaries:
 ```bash
 git clone https://github.com/stela2502/archeo-gui.git
 cd archeo-gui
-
 cargo build --release
 ```
 
@@ -129,40 +126,23 @@ or install them for your user:
 
 ```bash
 mkdir -p ~/.local/bin
-
 cp target/release/archeo ~/.local/bin/
 cp target/release/archeo-gui ~/.local/bin/
 ```
 
 Make sure `~/.local/bin` is in your `PATH`.
 
-For example, with Bash:
-
-```bash
-export PATH="$HOME/.local/bin:$PATH"
-```
-
-Add that line to `~/.bashrc` if necessary.
-
 ### Using the installation package
 
-Release source bundles include an installation helper.
-
-After unpacking the archive:
+Release source bundles include an installation helper:
 
 ```bash
 tar -xzf archeo-gui-0.1.0-install.tar.gz
 cd archeo-gui-0.1.0-install
-
 ./install.sh
 ```
 
-By default this builds the existing release binaries and installs them into:
-
-```text
-~/.local/bin/archeo
-~/.local/bin/archeo-gui
-```
+By default this installs both binaries into `~/.local/bin`.
 
 A different installation prefix can be selected with:
 
@@ -170,13 +150,13 @@ A different installation prefix can be selected with:
 ./install.sh --prefix /some/path
 ```
 
-The installer can also build without installing:
+To build without installing:
 
 ```bash
 ./install.sh --build-only
 ```
 
-To remove a user installation made by the installer:
+To remove the installation:
 
 ```bash
 ./uninstall.sh
@@ -191,123 +171,51 @@ Archeo uses **YAML scan profiles** to describe how a research directory should b
 Profiles control things such as:
 
 * directories that should be ignored,
-* handling of hidden files,
-* symbolic links,
+* handling of hidden files and symbolic links,
 * preview limits,
 * recognition of file types,
 * scientific data formats,
 * and domain-specific naming conventions.
 
-This keeps project-specific knowledge out of the Rust source code.
+The standard profiles are embedded directly into the executable, so **no profile configuration is required to get started**.
 
-You do **not** need to configure a profile before using Archeo.
-
-The standard profiles are embedded directly into the executable and therefore work immediately after installation.
-
-### Built-in profiles
-
-Archeo currently provides a general-purpose default profile and a profile aimed at single-cell/bioinformatics projects.
-
-To scan using the default configuration:
+The default profile can be used simply with:
 
 ```bash
 archeo scan --root /path/to/project
 ```
 
-For a single-cell project, an appropriate profile can be supplied explicitly:
-
-```bash
-archeo scan \
-    --root /path/to/project \
-    --profile profiles/single_cell.yaml
-```
-
 ### Create your own profile
 
-The easiest way to customize Archeo is **not to write a profile from scratch**.
-
-Instead, export one of the built-in profiles:
+The easiest way to customize Archeo is to export one of the built-in profiles rather than starting from scratch:
 
 ```bash
 archeo init-profile \
     --profile default \
-    --out my_profile.yaml
+    --out archeo-profile.yaml
 ```
 
-For a single-cell-oriented starting point:
+For single-cell and bioinformatics projects:
 
 ```bash
 archeo init-profile \
     --profile single-cell \
-    --out my_single_cell_profile.yaml
+    --out archeo-profile.yaml
 ```
 
-The resulting YAML file is an ordinary text file and can be edited with any editor:
+The resulting YAML file is ordinary text and can be edited with any text editor.
 
-```bash
-vim my_single_cell_profile.yaml
-```
-
-or:
-
-```bash
-nano my_single_cell_profile.yaml
-```
-
-You can then use your modified profile for a scan:
+Use the customized profile with:
 
 ```bash
 archeo scan \
     --root /path/to/project \
-    --profile my_single_cell_profile.yaml
+    --profile archeo-profile.yaml
 ```
 
-### Why profiles are separate from Archeo
+Profiles are deliberately separate from the application because different laboratories — and sometimes different projects in the same laboratory — develop their own filesystem vocabulary.
 
-Different laboratories — and sometimes different projects in the same laboratory — accumulate files in very different ways.
-
-For example, a single-cell project may contain:
-
-```text
-FASTQ
-BAM
-MTX
-HDF5
-h5ad
-RDS
-Seurat objects
-AnnData objects
-Nextflow output
-R scripts
-Python notebooks
-figures
-differential-expression tables
-cluster annotations
-logs
-archives
-```
-
-while another scientific project may have an entirely different vocabulary.
-
-Rather than teaching all of these conventions permanently to the Archeo source code, profiles provide a lightweight configuration layer:
-
-```text
-                  archeo
-                    │
-             generic scanner
-                    │
-                    ▼
-             scan profile.yaml
-                    │
-        ┌───────────┴───────────┐
-        ▼                       ▼
- single-cell project       another domain
- conventions               conventions
-```
-
-This also makes profiles easy to share.
-
-A laboratory can maintain its own profile in Git alongside its analysis conventions:
+A laboratory can therefore maintain reusable profiles under version control:
 
 ```text
 lab-archeo-profiles/
@@ -317,29 +225,7 @@ lab-archeo-profiles/
 └── legacy_projects.yaml
 ```
 
-Individual projects can then be scanned using the appropriate profile without modifying or recompiling Archeo.
-
-### Recommended workflow
-
-Start with the built-in profile that most closely matches your project:
-
-```bash
-archeo init-profile \
-    --profile single-cell \
-    --out archeo-profile.yaml
-```
-
-Edit `archeo-profile.yaml` to describe your laboratory or project conventions, then:
-
-```bash
-archeo scan \
-    --root . \
-    --profile archeo-profile.yaml
-```
-
-If the profile becomes useful across several projects, put it under version control and reuse it.
-
-In other words:
+This allows local conventions to evolve without modifying or recompiling Archeo.
 
 **Archeo provides the archaeology engine; the profile teaches it the local dialect spoken by your research folders.**
 
@@ -347,22 +233,13 @@ In other words:
 
 ## What it does
 
-At the moment, `archeo-gui` provides four main building blocks.
+`archeo-gui` currently provides four main building blocks.
 
 ### 1. Filesystem scanning
 
-The scanner recursively walks a research directory and records its artifacts.
+The scanner recursively walks a research directory, classifies its contents according to the selected profile, and records the resulting artifacts.
 
-Configurable scan profiles control:
-
-* excluded directories,
-* hidden files,
-* symbolic links,
-* preview limits,
-* file-type classification,
-* and domain-specific conventions.
-
-Large generated directories such as `.git`, `target`, temporary workflow folders, and other known noise can therefore be excluded before they dominate the project model.
+Large generated directories such as `.git`, `target`, temporary workflow folders, and other known noise can be excluded before they dominate the project model.
 
 ### 2. Persistent SQLite registry
 
@@ -382,18 +259,7 @@ These buckets provide a bridge between raw filesystem structure and semantic int
 
 An optional second pass sends those compact bucket descriptions to an Ollama model.
 
-The model is asked to propose semantic groups such as:
-
-* raw data
-* analysis scripts
-* notebooks
-* processed data
-* result files
-* figures
-* logs
-* archives
-* temporary artifacts
-* publication material
+The model can propose semantic groups such as raw data, analysis scripts, notebooks, processed data, results, figures, logs, archives, temporary artifacts, and publication material.
 
 The response, assumptions, confidence values, and prompt snapshot are stored in the registry.
 
@@ -405,9 +271,7 @@ This makes the AI layer an **auditable interpretation of the project**, rather t
 
 `archeo-gui` includes a native desktop interface built with `egui`/`eframe`.
 
-The GUI is intended to turn the registry into an interactive research-project explorer.
-
-Current components include:
+The GUI turns the registry into an interactive research-project explorer with:
 
 * project loading
 * bucket navigation
@@ -433,15 +297,13 @@ Two binaries are provided:
 
 ### Scan a project
 
-```
-archeo scan \
-    --root ~/projects/my_analysis \
-    --profile profiles/single_cell.yaml
+```bash
+archeo scan --root ~/projects/my_analysis
 ```
 
 Unless another database is specified, this creates:
 
-```
+```text
 ~/projects/my_analysis/.archeo/archeo.sqlite
 ```
 
@@ -449,11 +311,9 @@ If no profile is supplied, the embedded default profile is used.
 
 ### Cluster the project with a local LLM
 
-First make sure Ollama is running and the desired model is available.
+Make sure Ollama is running and the desired model is available, then:
 
-Then:
-
-```
+```bash
 archeo cluster \
     --root ~/projects/my_analysis \
     --model llama3.1
@@ -461,7 +321,7 @@ archeo cluster \
 
 Alternatively, address the registry directly:
 
-```
+```bash
 archeo cluster \
     --db ~/projects/my_analysis/.archeo/archeo.sqlite \
     --model llama3.1
@@ -469,29 +329,11 @@ archeo cluster \
 
 The Ollama API defaults to:
 
-```
+```text
 http://127.0.0.1:11434/api
 ```
 
 A different endpoint and timeout can be supplied through the CLI.
-
-### Create an editable scan profile
-
-The built-in profiles can be exported and customized:
-
-```
-archeo init-profile \
-    --profile default \
-    --out my_profile.yaml
-```
-
-For single-cell projects:
-
-```
-archeo init-profile \
-    --profile single-cell \
-    --out my_single_cell_profile.yaml
-```
 
 ---
 
@@ -499,33 +341,21 @@ archeo init-profile \
 
 One of the original use cases for `archeo-gui` is archaeology of bioinformatics projects, particularly single-cell sequencing analyses.
 
-These projects tend to accumulate several generations of:
+These projects tend to accumulate several generations of raw sequencing data, 10x matrices, Seurat and AnnData objects, preprocessing outputs, notebooks, scripts, workflow definitions, cluster annotations, differential-expression tables, QC plots, publication figures, and intermediate experiments.
 
-* raw sequencing data,
-* 10x matrices,
-* Seurat and AnnData objects,
-* preprocessing outputs,
-* notebooks,
-* R scripts,
-* Python scripts,
-* workflow definitions,
-* cluster annotations,
-* differential-expression tables,
-* QC plots,
-* publication figures,
-* and intermediate experiments.
+The included `single-cell` profile understands many of these conventions and excludes several common high-volume generated directories.
 
-The included `single_cell` profile understands many of these conventions and excludes several common high-volume generated directories.
+Start by exporting it:
 
-For example:
-
-```
-archeo scan \
-    --root ~/old_scRNA_project \
-    --profile profiles/single_cell.yaml
+```bash
+archeo init-profile \
+    --profile single-cell \
+    --out archeo-profile.yaml
 ```
 
-The profile is deliberately editable. A lab with established naming conventions can therefore turn those conventions into explicit classification rules rather than relying entirely on heuristics or AI.
+Then adapt it to the project or laboratory conventions as needed.
+
+The profile is deliberately editable: established naming conventions can become explicit classification rules rather than relying entirely on heuristics or AI.
 
 ---
 
@@ -533,7 +363,7 @@ The profile is deliberately editable. A lab with established naming conventions 
 
 At a high level:
 
-```
+```text
                   Research folder
                         │
                         ▼
@@ -564,7 +394,7 @@ At a high level:
 
 The code is correspondingly split into a few major subsystems:
 
-```
+```text
 src/
 ├── ai/          local LLM prompting and response handling
 ├── gui/         egui/eframe desktop interface
@@ -575,40 +405,25 @@ src/
 └── lib.rs
 ```
 
-The separation is intentional: filesystem discovery, persistent state, visualization, and probabilistic interpretation should remain independently testable components.
+The separation is intentional: filesystem discovery, persistent state, visualization, and probabilistic interpretation remain independently understandable components.
 
 ---
 
-## Building
+## Development
 
-`archeo-gui` is written in Rust using the 2024 edition.
+For development builds:
 
-Clone the repository and build it with Cargo:
-
-```
-git clone https://github.com/stela2502/archeo-gui
-cd archeo-gui
-cargo build --release
-```
-
-The resulting binaries are available under:
-
-```
-target/release/archeo
-target/release/archeo-gui
-```
-
-For development:
-
-```
+```bash
 cargo run --bin archeo -- --help
 ```
 
 or:
 
-```
+```bash
 cargo run --bin archeo-gui
 ```
+
+See [Installation](#installation) for release builds and installation instructions.
 
 ---
 
@@ -616,9 +431,7 @@ cargo run --bin archeo-gui
 
 The filesystem scanner and SQLite registry do **not** require an LLM.
 
-This is intentional.
-
-A project should remain inspectable even when:
+A project remains inspectable when:
 
 * Ollama is not installed,
 * no suitable model is available,
@@ -645,7 +458,7 @@ Nevertheless, this project is experimental software. Users working with sensitiv
 
 ## Current status
 
-`archeo-gui` is currently an experimental project and under active development.
+`archeo-gui` is experimental and under active development.
 
 Implemented foundations include:
 
@@ -660,8 +473,6 @@ Implemented foundations include:
 * local Ollama integration
 * structured AI clustering responses
 * persistent AI prompt/response records
-
-There is considerably more that project archaeology can become.
 
 Possible future directions include richer artifact relationships, scan-to-scan comparison, provenance reconstruction, workflow detection, duplicate/obsolete artifact discovery, interactive correction of inferred groups, and deeper content-aware analysis where explicitly requested by the user.
 
@@ -696,17 +507,16 @@ In particular, profiles for additional scientific domains could make the scanner
 
 ---
 
-License
+## License
 
-archeo-gui is available under a dual-use licensing model:
+`archeo-gui` is available under a dual-use licensing model:
 
-    Teaching, academic research, and non-commercial use: free of charge.
+* **Teaching, academic research, and non-commercial use:** free of charge.
+* **Commercial or business use:** requires a commercial license.
 
-    Commercial or business use: requires a commercial license.
+This means universities, educators, students, and academic researchers can use `archeo-gui` freely for teaching and non-commercial research, while companies and other commercial users must obtain a paid license.
 
-This means universities, educators, students, and academic researchers can use archeo-gui freely for teaching and non-commercial research, while companies and other commercial users must obtain a paid license.
-
-See LICENSE and COMMERCIAL.md for the exact licensing terms and commercial licensing information.
+See `LICENSE` and `COMMERCIAL.md` for the exact licensing terms and commercial licensing information.
 
 ---
 
@@ -716,4 +526,4 @@ See LICENSE and COMMERCIAL.md for the exact licensing terms and commercial licen
 
 Built for scientists who have ever opened an old project directory and thought:
 
-
+> *What the hell happened here?*
